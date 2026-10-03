@@ -215,9 +215,11 @@ fn calculate_cpu_usage(prev: &ProcessMetrics, curr: &ProcessMetrics) -> (f64, u6
 
 unsafe extern "system" fn test_logger(level: u32, _timestamp: u64, message: *const u16) {
     if !message.is_null() {
-        let len = (0..512).position(|i| *message.add(i) == 0).unwrap_or(512);
-        let s = String::from_utf16_lossy(std::slice::from_raw_parts(message, len));
-        println!("    [Wintun Log Level {}] {}", level, s);
+        unsafe {
+            let len = (0..512).position(|i| *message.add(i) == 0).unwrap_or(512);
+            let s = String::from_utf16_lossy(std::slice::from_raw_parts(message, len));
+            println!("    [Wintun Log Level {}] {}", level, s);
+        }
     }
 }
 

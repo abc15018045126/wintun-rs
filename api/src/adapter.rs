@@ -38,7 +38,7 @@ const GENERIC_READ: u32 = 0x80000000;
 const GENERIC_WRITE: u32 = 0x40000000;
 
 #[link(name = "cfgmgr32")]
-extern "system" {
+unsafe extern "system" {
     fn CM_Locate_DevNodeW(pdn_dev_inst: *mut u32, p_device_id: *const u16, ul_flags: u32) -> u32;
     fn CM_Get_Device_IDW(dn_dev_inst: u32, buffer: *mut u16, buffer_len: u32, ul_flags: u32)
         -> u32;

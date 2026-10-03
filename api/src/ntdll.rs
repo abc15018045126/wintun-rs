@@ -26,7 +26,7 @@ pub struct RtlProcessModules {
 }
 
 #[link(name = "ntdll")]
-extern "system" {
+unsafe extern "system" {
     pub fn NtQuerySystemInformation(
         class: u32,
         info: *mut c_void,
@@ -45,7 +45,7 @@ extern "system" {
 }
 
 #[link(name = "advapi32")]
-extern "system" {
+unsafe extern "system" {
     #[link_name = "SystemFunction036"]
     pub fn RtlGenRandom(buf: *mut c_void, len: u32) -> u8;
 }

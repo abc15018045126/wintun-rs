@@ -17,12 +17,12 @@ use crate::types::*;
 const LOAD_LIBRARY_SEARCH_SYSTEM32: u32 = 0x00000800;
 
 #[link(name = "kernel32")]
-extern "system" {
+unsafe extern "system" {
     fn LoadLibraryExW(lp_lib_file_name: *const u16, h_file: HANDLE, dw_flags: u32) -> HMODULE;
 }
 
 #[link(name = "iphlpapi")]
-extern "system" {
+unsafe extern "system" {
     fn ConvertInterfaceAliasToLuid(
         interface_alias: *const u16,
         interface_luid: *mut NetLuid,

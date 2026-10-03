@@ -21,7 +21,7 @@ use crate::types::{
 };
 
 #[link(name = "kernel32")]
-extern "system" {
+unsafe extern "system" {
     fn AddSIDToBoundaryDescriptor(
         boundary_descriptor: *mut HANDLE,
         required_sid: *mut c_void,

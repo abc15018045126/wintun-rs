@@ -1,7 +1,8 @@
 #![allow(
     clippy::missing_safety_doc,
     clippy::too_many_arguments,
-    clippy::not_unsafe_ptr_arg_deref
+    clippy::not_unsafe_ptr_arg_deref,
+    unsafe_op_in_unsafe_fn
 )]
 
 pub mod adapter;
@@ -30,7 +31,7 @@ use crate::types::*;
 
 const TRUE: BOOL = 1;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn DllMain(
     _hinst_dll: HINSTANCE,
     fdw_reason: DWORD,
@@ -51,7 +52,7 @@ pub unsafe extern "system" fn DllMain(
     TRUE
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn WintunCreateAdapter(
     name: *const u16,
     tunnel_type: *const u16,
@@ -60,17 +61,17 @@ pub unsafe extern "system" fn WintunCreateAdapter(
     adapter::wintun_create_adapter(name, tunnel_type, requested_guid)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn WintunOpenAdapter(name: *const u16) -> WINTUN_ADAPTER_HANDLE {
     adapter::wintun_open_adapter(name)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn WintunCloseAdapter(adapter: WINTUN_ADAPTER_HANDLE) {
     adapter::wintun_close_adapter(adapter)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn WintunDeleteDriver() -> BOOL {
     if driver::wintun_delete_driver() {
         TRUE
@@ -79,7 +80,7 @@ pub unsafe extern "system" fn WintunDeleteDriver() -> BOOL {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn WintunGetAdapterLUID(
     adapter: WINTUN_ADAPTER_HANDLE,
     luid: *mut NetLuid,
@@ -87,17 +88,17 @@ pub unsafe extern "system" fn WintunGetAdapterLUID(
     adapter::wintun_get_adapter_luid(adapter, luid)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn WintunGetRunningDriverVersion() -> DWORD {
     driver::wintun_get_running_driver_version()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn WintunSetLogger(new_logger: Option<WintunLoggerCallback>) {
     logger::set_logger(new_logger)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn WintunStartSession(
     adapter: WINTUN_ADAPTER_HANDLE,
     capacity: DWORD,
@@ -105,17 +106,17 @@ pub unsafe extern "system" fn WintunStartSession(
     session::wintun_start_session(adapter, capacity)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn WintunEndSession(session: WINTUN_SESSION_HANDLE) {
     session::wintun_end_session(session)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn WintunGetReadWaitEvent(session: WINTUN_SESSION_HANDLE) -> HANDLE {
     session::wintun_get_read_wait_event(session)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn WintunReceivePacket(
     session: WINTUN_SESSION_HANDLE,
     packet_size: *mut DWORD,
@@ -123,7 +124,7 @@ pub unsafe extern "system" fn WintunReceivePacket(
     session::wintun_receive_packet(session, packet_size)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn WintunReleaseReceivePacket(
     session: WINTUN_SESSION_HANDLE,
     packet: *const u8,
@@ -131,7 +132,7 @@ pub unsafe extern "system" fn WintunReleaseReceivePacket(
     session::wintun_release_receive_packet(session, packet)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn WintunAllocateSendPacket(
     session: WINTUN_SESSION_HANDLE,
     packet_size: DWORD,
@@ -139,7 +140,7 @@ pub unsafe extern "system" fn WintunAllocateSendPacket(
     session::wintun_allocate_send_packet(session, packet_size)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "system" fn WintunSendPacket(session: WINTUN_SESSION_HANDLE, packet: *const u8) {
     session::wintun_send_packet(session, packet)
 }

@@ -49,7 +49,7 @@ pub const CM_PROB_DISABLED: u32 = 22;
 pub const WINTUN_HWID: &str = "Wintun";
 
 #[link(name = "cfgmgr32")]
-extern "system" {
+unsafe extern "system" {
     pub fn CM_Get_DevNode_Status(
         pul_status: *mut u32,
         pul_problem_number: *mut u32,
@@ -60,7 +60,7 @@ extern "system" {
 }
 
 #[link(name = "shlwapi")]
-extern "system" {
+unsafe extern "system" {
     pub fn PathCombineW(psz_dest: *mut u16, psz_dir: *const u16, psz_file: *const u16) -> *mut u16;
     pub fn PathFindFileNameW(psz_path: *const u16) -> *const u16;
 }
@@ -144,7 +144,7 @@ pub struct SP_DRVINFO_DETAIL_DATA_W {
 }
 
 #[link(name = "kernel32")]
-extern "system" {
+unsafe extern "system" {
     pub fn InitializeCriticalSectionAndSpinCount(
         lp_critical_section: *mut CRITICAL_SECTION,
         dw_spin_count: u32,
@@ -177,7 +177,7 @@ impl Drop for CriticalSectionLock<'_> {
 }
 
 #[link(name = "advapi32")]
-extern "system" {
+unsafe extern "system" {
     pub fn OpenProcessToken(
         process_handle: HANDLE,
         desired_access: u32,
@@ -186,14 +186,14 @@ extern "system" {
 }
 
 #[link(name = "ole32")]
-extern "system" {
+unsafe extern "system" {
     pub fn CLSIDFromString(lpsz: *const u16, pclsid: *mut GUID) -> i32;
     pub fn CoCreateGuid(pguid: *mut GUID) -> i32;
     pub fn StringFromGUID2(rguid: *const GUID, lpsz: *mut u16, cch_max: i32) -> i32;
 }
 
 #[link(name = "version")]
-extern "system" {
+unsafe extern "system" {
     pub fn GetFileVersionInfoSizeW(lptstr_filename: *const u16, lpdw_handle: *mut u32) -> u32;
     pub fn GetFileVersionInfoW(
         lptstr_filename: *const u16,
@@ -210,7 +210,7 @@ extern "system" {
 }
 
 #[link(name = "setupapi")]
-extern "system" {
+unsafe extern "system" {
     pub fn SetupDiGetDevicePropertyW(
         device_info_set: HDEVINFO,
         device_info_data: *const SP_DEVINFO_DATA,
@@ -673,7 +673,7 @@ pub fn get_adapter_wintun_name(dev_info: HDEVINFO, dev_info_data: &SP_DEVINFO_DA
     }
 }
 
-extern "C" {
+unsafe extern "C" {
     fn _wcsicmp(string1: *const u16, string2: *const u16) -> i32;
 }
 

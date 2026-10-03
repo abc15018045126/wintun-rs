@@ -4,367 +4,154 @@
 [![Documentation](https://docs.rs/wintun-rs/badge.svg)](https://docs.rs/wintun-rs)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Pure Rust reimplementation and Safe API library for [WireGuard Wintun](https://github.com/WireGuard/wintun) TUN devices on Windows.
+**wintun-rs** is a pure Rust reimplementation of the [WireGuard Wintun](https://github.com/WireGuard/wintun) userspace library for Windows TUN network adapters.
 
-## 致谢与声明 / Acknowledgements & Credits
-
-本项目基于 WireGuard 官方的 **Wintun** 项目：
-- **官方仓库**: [https://git.zx2c4.com/wintun](https://git.zx2c4.com/wintun)
-- **GitHub 镜像**: [WireGuard/wintun (GitHub)](https://github.com/WireGuard/wintun)
-- **原作者**: [Jason A. Donenfeld](https://www.zx2c4.com/) / WireGuard LLC
-
-> 本项目核心 Rust 封装采用 **MIT** 协议开源，向原作者 Jason A. Donenfeld 及 WireGuard 团队在 Windows TUN 驱动领域做出的卓越贡献致敬！
+Unlike simple FFI wrappers, **wintun-rs** provides a 100% native Rust userspace stack, embedding the signed kernel driver binaries directly and exposing safe, idiomatic Rust abstractions without requiring an external `wintun.dll` on disk.
 
 ---
 
-## 与 crates.io 现有 `wintun` crate 的区别
+## Key Highlights
 
-| 对比维度 | crates.io 现有 `wintun` (0.5.1) | 本项目 `wintun-rs` |
+- **100% Safe Native Rust API**: High-level abstractions (`Adapter`, `Session`, `Packet`, `SendPacket`) that eliminate `unsafe` code in downstream applications.
+- **Zero DLL Dependency**: The driver files (`wintun.sys`, `wintun.inf`, `wintun.cat`) are embedded into the library binary via `include_bytes!`. No external `wintun.dll` is required on the user's filesystem.
+- **Automatic Resource Cleanup (RAII)**: All Windows OS handles (`HDEVINFO`, registry keys, event objects, ring buffer allocations, and adapters) are guarded with automatic `Drop` implementations to prevent leaks.
+- **Legacy Device Cleanup**: Automatically cleans up orphaned or stale Wintun adapters from previous unexpected process terminations.
+- **Dual-Mode Output**:
+  - Use directly as a standard Rust dependency (`rlib`) in your application.
+  - Or compile to a drop-in C-compatible `wintun.dll` (`cdylib`) matching the official WireGuard exports.
+
+---
+
+## Comparison: `wintun-rs` vs. Existing `wintun` Crate (0.5.1)
+
+| Feature | crates.io `wintun` (0.5.1) | **wintun-rs** (This Crate) |
 | :--- | :--- | :--- |
-| **实现方式** | 仅是 `LoadLibrary("wintun.dll")` 的动态加载 FFI 封装 | **纯 Rust 完整重构** Wintun Userspace 核心实现 |
-| **DLL 依赖** | **必须在磁盘放置 `wintun.dll`**，缺少时运行时报错 | **无需任何外部 DLL**，可直接作为 Rust 原生库静态编译 |
-| **驱动分发** | 需用户另外下载官方驱动安装包 | **内置内嵌驱动二进制**，自动处理驱动提取与安装 |
-| **调用安全** | 载入 DLL 需写 `unsafe { wintun::load(...) }` | 提供 **100% Safe Rust 原生类型**（`Adapter`、`Session`）与 RAII 自动释放 |
-| **DLL 产物** | 无法生成 DLL | 既可当 Rust 库，也可编译生成标准的 `wintun.dll` |
+| **Architecture** | Dynamic `LoadLibrary` wrapper around `wintun.dll` | **Full native Rust reimplementation** of Wintun userspace logic |
+| **External Files Required** | **Requires** `wintun.dll` on disk alongside the executable | **None**; driver binaries are embedded directly into your binary |
+| **Driver Staging** | Must be installed or downloaded separately by user | **Automatic**; extracts and installs driver via Windows SetupAPI |
+| **Safety** | Requires `unsafe { wintun::load(...) }` dynamic calls | **100% Safe Rust**; type-safe API with compile-time checks |
+| **Build Target** | Consumer only (cannot produce a DLL) | **Dual-mode**: Can be linked as a Rust library or built as `wintun.dll` |
 
 ---
-
-# [Wintun Network Adapter](https://www.wintun.net/)
-### TUN Device Driver for Windows
-
-This is a layer 3 TUN driver for Windows 7, 8, 8.1, 10, and 11. Originally created for [WireGuard](https://www.wireguard.com/), it is intended to be useful to a wide variety of projects that require layer 3 tunneling devices with implementations primarily in userspace.
 
 ## Installation
 
-Wintun is deployed as a platform-specific `wintun.dll` file. Install the `wintun.dll` file side-by-side with your application. Download the dll from [wintun.net](https://www.wintun.net/), alongside the header file for your application described below.
+Add **wintun-rs** to your `Cargo.toml`:
 
-## Usage
-
-Include the [`wintun.h` file](https://git.zx2c4.com/wintun/tree/api/wintun.h) in your project simply by copying it there and dynamically load the `wintun.dll` using [`LoadLibraryEx()`](https://docs.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexa) and [`GetProcAddress()`](https://docs.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getprocaddress) to resolve each function, using the typedefs provided in the header file. The [`InitializeWintun` function in the example.c code](https://git.zx2c4.com/wintun/tree/example/example.c) provides this in a function that you can simply copy and paste.
-
-With the library setup, Wintun can then be used by first creating an adapter, configuring it, and then setting its status to "up". Adapters have names (e.g. "OfficeNet") and types (e.g. "Wintun").
-
-```C
-WINTUN_ADAPTER_HANDLE Adapter1 = WintunCreateAdapter(L"OfficeNet", L"Wintun", &SomeFixedGUID1);
-WINTUN_ADAPTER_HANDLE Adapter2 = WintunCreateAdapter(L"HomeNet", L"Wintun", &SomeFixedGUID2);
-WINTUN_ADAPTER_HANDLE Adapter3 = WintunCreateAdapter(L"Data Center", L"Wintun", &SomeFixedGUID3);
+```toml
+[dependencies]
+wintun = { package = "wintun-rs", version = "0.0.4" }
 ```
 
-After creating an adapter, we can use it by starting a session:
+Or via `cargo`:
 
-```C
-WINTUN_SESSION_HANDLE Session = WintunStartSession(Adapter2, 0x400000);
+```bash
+cargo add wintun-rs
 ```
 
-Then, the `WintunAllocateSendPacket` and `WintunSendPacket` functions can be used for sending packets ([used by `SendPackets` in the example.c code](https://git.zx2c4.com/wintun/tree/example/example.c)):
+*(Note: Although the package is published as `wintun-rs`, the library crate name is `wintun`, so you can write `use wintun::Adapter;` naturally.)*
 
-```C
-BYTE *OutgoingPacket = WintunAllocateSendPacket(Session, PacketDataSize);
-if (OutgoingPacket)
-{
-    memcpy(OutgoingPacket, PacketData, PacketDataSize);
-    WintunSendPacket(Session, OutgoingPacket);
+---
+
+## Quick Example
+
+```rust
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
+use wintun::Adapter;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 1. Create or open a Wintun adapter (Administrator privilege required)
+    let adapter = Adapter::create("DemoAdapter", "ExampleTunnel", None)
+        .or_else(|_| Adapter::open("DemoAdapter"))?;
+
+    println!("Adapter created. LUID: 0x{:016X}", adapter.get_luid().value);
+
+    // 2. Start a TUN session with 4MB ring buffer capacity
+    let session = Arc::new(adapter.start_session(0x400000)?);
+
+    // 3. Receive incoming packets in a worker thread
+    let recv_session = session.clone();
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
+
+    let recv_thread = thread::spawn(move || {
+        while r.load(Ordering::Relaxed) {
+            // Wait up to 250ms for packets to arrive
+            if recv_session.wait_for_data(250) {
+                // Drain available packets
+                while let Ok(Some(packet)) = recv_session.receive_packet() {
+                    println!("Received IP packet: {} bytes", packet.len());
+                    // `packet` automatically frees its ring slot when dropped!
+                }
+            }
+        }
+    });
+
+    // 4. Send an IP packet
+    let mut send_packet = session.allocate_send_packet(28)?;
+    // Fill packet data (IPv4 header + payload)...
+    send_packet[0] = 0x45; // IPv4
+    // Send explicitly or let it send automatically on drop:
+    send_packet.send();
+
+    // 5. Shutdown and cleanup
+    thread::sleep(Duration::from_secs(3));
+    running.store(false, Ordering::Relaxed);
+    recv_thread.join().unwrap();
+
+    // Adapter and Session automatically release all handles when dropped!
+    Ok(())
 }
-else if (GetLastError() != ERROR_BUFFER_OVERFLOW) // Silently drop packets if the ring is full
-    Log(L"Packet write failed");
 ```
 
-And the `WintunReceivePacket` and `WintunReleaseReceivePacket` functions can be used for receiving packets ([used by `ReceivePackets` in the example.c code](https://git.zx2c4.com/wintun/tree/example/example.c)):
+A complete runnable sample is available in [`example/example.rs`](example/example.rs). You can run it with:
 
-```C
-for (;;)
-{
-    DWORD IncomingPacketSize;
-    BYTE *IncomingPacket = WintunReceivePacket(Session, &IncomingPacketSize);
-    if (IncomingPacket)
-    {
-        DoSomethingWithPacket(IncomingPacket, IncomingPacketSize);
-        WintunReleaseReceivePacket(Session, IncomingPacket);
-    }
-    else if (GetLastError() == ERROR_NO_MORE_ITEMS)
-        WaitForSingleObject(WintunGetReadWaitEvent(Session), INFINITE);
-    else
-    {
-        Log(L"Packet read failed");
-        break;
-    }
-}
+```bash
+cargo run --example example
 ```
 
-Some high performance use cases may want to spin on `WintunReceivePacket` for a number of cycles before falling back to waiting on the read-wait event.
-
-You are **highly encouraged** to read the [**example.c short example**](https://git.zx2c4.com/wintun/tree/example/example.c) to see how to put together a simple userspace network tunnel.
-
-The various functions and definitions are [documented in the reference below](#Reference).
-
-## Reference
-
-### Macro Definitions
-
-#### WINTUN\_MAX\_POOL
-
-`#define WINTUN_MAX_POOL   256`
-
-Maximum pool name length including zero terminator
-
-#### WINTUN\_MIN\_RING\_CAPACITY
-
-`#define WINTUN_MIN_RING_CAPACITY   0x20000 /* 128kiB */`
-
-Minimum ring capacity.
-
-#### WINTUN\_MAX\_RING\_CAPACITY
-
-`#define WINTUN_MAX_RING_CAPACITY   0x4000000 /* 64MiB */`
-
-Maximum ring capacity.
-
-#### WINTUN\_MAX\_IP\_PACKET\_SIZE
-
-`#define WINTUN_MAX_IP_PACKET_SIZE   0xFFFF`
-
-Maximum IP packet size
-
-### Typedefs
-
-#### WINTUN\_ADAPTER\_HANDLE
-
-`typedef void* WINTUN_ADAPTER_HANDLE`
-
-A handle representing Wintun adapter
-
-#### WINTUN\_ENUM\_CALLBACK
-
-`typedef BOOL(* WINTUN_ENUM_CALLBACK) (WINTUN_ADAPTER_HANDLE Adapter, LPARAM Param)`
-
-Called by WintunEnumAdapters for each adapter in the pool.
-
-**Parameters**
-
-- *Adapter*: Adapter handle, which will be freed when this function returns.
-- *Param*: An application-defined value passed to the WintunEnumAdapters.
-
-**Returns**
-
-Non-zero to continue iterating adapters; zero to stop.
-
-#### WINTUN\_LOGGER\_CALLBACK
-
-`typedef void(* WINTUN_LOGGER_CALLBACK) (WINTUN_LOGGER_LEVEL Level, DWORD64 Timestamp, const WCHAR *Message)`
-
-Called by internal logger to report diagnostic messages
-
-**Parameters**
-
-- *Level*: Message level.
-- *Timestamp*: Message timestamp in in 100ns intervals since 1601-01-01 UTC.
-- *Message*: Message text.
-
-#### WINTUN\_SESSION\_HANDLE
-
-`typedef void* WINTUN_SESSION_HANDLE`
-
-A handle representing Wintun session
-
-### Enumeration Types
-
-#### WINTUN\_LOGGER\_LEVEL
-
-`enum WINTUN_LOGGER_LEVEL`
-
-Determines the level of logging, passed to WINTUN\_LOGGER\_CALLBACK.
-
-- *WINTUN\_LOG\_INFO*: Informational
-- *WINTUN\_LOG\_WARN*: Warning
-- *WINTUN\_LOG\_ERR*: Error
-
-Enumerator
-
-### Functions
-
-#### WintunCreateAdapter()
-
-`WINTUN_ADAPTER_HANDLE WintunCreateAdapter (const WCHAR * Name, const WCHAR * TunnelType, const GUID * RequestedGUID)`
-
-Creates a new Wintun adapter.
-
-**Parameters**
-
-- *Name*: The requested name of the adapter. Zero-terminated string of up to MAX\_ADAPTER\_NAME-1 characters.
-- *Name*: Name of the adapter tunnel type. Zero-terminated string of up to MAX\_ADAPTER\_NAME-1 characters.
-- *RequestedGUID*: The GUID of the created network adapter, which then influences NLA generation deterministically. If it is set to NULL, the GUID is chosen by the system at random, and hence a new NLA entry is created for each new adapter. It is called "requested" GUID because the API it uses is completely undocumented, and so there could be minor interesting complications with its usage.
-
-**Returns**
-
-If the function succeeds, the return value is the adapter handle. Must be released with WintunCloseAdapter. If the function fails, the return value is NULL. To get extended error information, call GetLastError.
-
-#### WintunOpenAdapter()
-
-`WINTUN_ADAPTER_HANDLE WintunOpenAdapter (const WCHAR * Name)`
-
-Opens an existing Wintun adapter.
-
-**Parameters**
-
-- *Name*: The requested name of the adapter. Zero-terminated string of up to MAX\_ADAPTER\_NAME-1 characters.
-
-**Returns**
-
-If the function succeeds, the return value is adapter handle. Must be released with WintunCloseAdapter. If the function fails, the return value is NULL. To get extended error information, call GetLastError.
-
-#### WintunCloseAdapter()
-
-`void WintunCloseAdapter (WINTUN_ADAPTER_HANDLE Adapter)`
-
-Releases Wintun adapter resources and, if adapter was created with WintunCreateAdapter, removes adapter.
-
-**Parameters**
-
-- *Adapter*: Adapter handle obtained with WintunCreateAdapter or WintunOpenAdapter.
-
-#### WintunDeleteDriver()
-
-`BOOL WintunDeleteDriver ()`
-
-Deletes the Wintun driver if there are no more adapters in use.
-
-**Returns**
-
-If the function succeeds, the return value is nonzero. If the function fails, the return value is zero. To get extended error information, call GetLastError.
-
-#### WintunGetAdapterLuid()
-
-`void WintunGetAdapterLuid (WINTUN_ADAPTER_HANDLE Adapter, NET_LUID * Luid)`
-
-Returns the LUID of the adapter.
-
-**Parameters**
-
-- *Adapter*: Adapter handle obtained with WintunOpenAdapter or WintunCreateAdapter
-- *Luid*: Pointer to LUID to receive adapter LUID.
-
-#### WintunGetRunningDriverVersion()
-
-`DWORD WintunGetRunningDriverVersion (void )`
-
-Determines the version of the Wintun driver currently loaded.
-
-**Returns**
-
-If the function succeeds, the return value is the version number. If the function fails, the return value is zero. To get extended error information, call GetLastError. Possible errors include the following: ERROR\_FILE\_NOT\_FOUND Wintun not loaded
-
-#### WintunSetLogger()
-
-`void WintunSetLogger (WINTUN_LOGGER_CALLBACK NewLogger)`
-
-Sets logger callback function.
-
-**Parameters**
-
-- *NewLogger*: Pointer to callback function to use as a new global logger. NewLogger may be called from various threads concurrently. Should the logging require serialization, you must handle serialization in NewLogger. Set to NULL to disable.
-
-#### WintunStartSession()
-
-`WINTUN_SESSION_HANDLE WintunStartSession (WINTUN_ADAPTER_HANDLE Adapter, DWORD Capacity)`
-
-Starts Wintun session.
-
-**Parameters**
-
-- *Adapter*: Adapter handle obtained with WintunOpenAdapter or WintunCreateAdapter
-- *Capacity*: Rings capacity. Must be between WINTUN\_MIN\_RING\_CAPACITY and WINTUN\_MAX\_RING\_CAPACITY (incl.) Must be a power of two.
-
-**Returns**
-
-Wintun session handle. Must be released with WintunEndSession. If the function fails, the return value is NULL. To get extended error information, call GetLastError.
-
-#### WintunEndSession()
-
-`void WintunEndSession (WINTUN_SESSION_HANDLE Session)`
-
-Ends Wintun session.
-
-**Parameters**
-
-- *Session*: Wintun session handle obtained with WintunStartSession
-
-#### WintunGetReadWaitEvent()
-
-`HANDLE WintunGetReadWaitEvent (WINTUN_SESSION_HANDLE Session)`
-
-Gets Wintun session's read-wait event handle.
-
-**Parameters**
-
-- *Session*: Wintun session handle obtained with WintunStartSession
-
-**Returns**
-
-Pointer to receive event handle to wait for available data when reading. Should WintunReceivePacket return ERROR\_NO\_MORE\_ITEMS (after spinning on it for a while under heavy load), wait for this event to become signaled before retrying WintunReceivePacket. Do not call CloseHandle on this event - it is managed by the session.
-
-#### WintunReceivePacket()
-
-`BYTE* WintunReceivePacket (WINTUN_SESSION_HANDLE Session, DWORD * PacketSize)`
-
-Retrieves one or packet. After the packet content is consumed, call WintunReleaseReceivePacket with Packet returned from this function to release internal buffer. This function is thread-safe.
-
-**Parameters**
-
-- *Session*: Wintun session handle obtained with WintunStartSession
-- *PacketSize*: Pointer to receive packet size.
-
-**Returns**
-
-Pointer to layer 3 IPv4 or IPv6 packet. Client may modify its content at will. If the function fails, the return value is NULL. To get extended error information, call GetLastError. Possible errors include the following: ERROR\_HANDLE\_EOF Wintun adapter is terminating; ERROR\_NO\_MORE\_ITEMS Wintun buffer is exhausted; ERROR\_INVALID\_DATA Wintun buffer is corrupt
-
-#### WintunReleaseReceivePacket()
-
-`void WintunReleaseReceivePacket (WINTUN_SESSION_HANDLE Session, const BYTE * Packet)`
-
-Releases internal buffer after the received packet has been processed by the client. This function is thread-safe.
-
-**Parameters**
-
-- *Session*: Wintun session handle obtained with WintunStartSession
-- *Packet*: Packet obtained with WintunReceivePacket
-
-#### WintunAllocateSendPacket()
-
-`BYTE* WintunAllocateSendPacket (WINTUN_SESSION_HANDLE Session, DWORD PacketSize)`
-
-Allocates memory for a packet to send. After the memory is filled with packet data, call WintunSendPacket to send and release internal buffer. WintunAllocateSendPacket is thread-safe and the WintunAllocateSendPacket order of calls define the packet sending order.
-
-**Parameters**
-
-- *Session*: Wintun session handle obtained with WintunStartSession
-- *PacketSize*: Exact packet size. Must be less or equal to WINTUN\_MAX\_IP\_PACKET\_SIZE.
-
-**Returns**
-
-Returns pointer to memory where to prepare layer 3 IPv4 or IPv6 packet for sending. If the function fails, the return value is NULL. To get extended error information, call GetLastError. Possible errors include the following: ERROR\_HANDLE\_EOF Wintun adapter is terminating; ERROR\_BUFFER\_OVERFLOW Wintun buffer is full;
-
-#### WintunSendPacket()
-
-`void WintunSendPacket (WINTUN_SESSION_HANDLE Session, const BYTE * Packet)`
-
-Sends the packet and releases internal buffer. WintunSendPacket is thread-safe, but the WintunAllocateSendPacket order of calls define the packet sending order. This means the packet is not guaranteed to be sent in the WintunSendPacket yet.
-
-**Parameters**
-
-- *Session*: Wintun session handle obtained with WintunStartSession
-- *Packet*: Packet obtained with WintunAllocateSendPacket
-
-## Building
-
-**Do not distribute drivers or files named "Wintun", as they will most certainly clash with official deployments. Instead distribute [`wintun.dll` as downloaded from wintun.net](https://www.wintun.net).**
-
-General requirements:
-
-- [Visual Studio 2019](https://visualstudio.microsoft.com/downloads/) with Windows SDK
-- [Windows Driver Kit](https://docs.microsoft.com/en-us/windows-hardware/drivers/download-the-wdk)
-
-`wintun.sln` may be opened in Visual Studio for development and building. Be sure to run `bcdedit /set testsigning on` and then reboot before to enable unsigned driver loading. The default run sequence (F5) in Visual Studio will build the example project and its dependencies.
+---
+
+## Building a C-Compatible `wintun.dll`
+
+If you need a drop-in replacement for `wintun.dll` to use with C, C++, Go, or Python:
+
+```bash
+cargo build --release
+```
+
+The resulting `target/release/wintun.dll` exports all official Wintun C functions:
+- `WintunCreateAdapter`
+- `WintunOpenAdapter`
+- `WintunCloseAdapter`
+- `WintunDeleteDriver`
+- `WintunGetAdapterLUID`
+- `WintunGetRunningDriverVersion`
+- `WintunSetLogger`
+- `WintunStartSession`
+- `WintunEndSession`
+- `WintunGetReadWaitEvent`
+- `WintunReceivePacket`
+- `WintunReleaseReceivePacket`
+- `WintunAllocateSendPacket`
+- `WintunSendPacket`
+
+---
+
+## Acknowledgements & Credits
+
+This project is a Rust reimplementation of the official **Wintun** project developed by WireGuard:
+- **Official Repository**: [https://git.zx2c4.com/wintun](https://git.zx2c4.com/wintun)
+- **GitHub Mirror**: [WireGuard/wintun](https://github.com/WireGuard/wintun)
+- **Original Author**: [Jason A. Donenfeld](https://www.zx2c4.com/) / WireGuard LLC
+
+We extend our deep gratitude to Jason A. Donenfeld and the WireGuard team for creating the high-performance Wintun architecture and Windows TUN driver.
+
+---
 
 ## License
 
-The entire contents of [the repository](https://git.zx2c4.com/wintun/), including all documentation and example code, is "Copyright © 2018-2021 WireGuard LLC. All Rights Reserved." Source code is licensed under the [GPLv2](COPYING). Prebuilt binaries from [wintun.net](https://www.wintun.net/) are released under a more permissive license suitable for more forms of software contained inside of the .zip files distributed there.
+This project is licensed under the [MIT License](LICENSE).

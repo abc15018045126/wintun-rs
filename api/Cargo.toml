@@ -1,9 +1,25 @@
 [package]
-name = "wintun"
-version = "0.14.1"
+name = "wintun-rs"
+version = "0.0.4"
 edition = "2021"
-authors = ["WireGuard LLC", "Antigravity"]
-description = "Wintun userspace API library rewritten in Rust"
+authors = ["abc15018045126", "WireGuard LLC", "Antigravity"]
+description = "Native Safe Rust library and userspace bindings for Wintun (WireGuard) TUN devices on Windows."
+license = "MIT"
+repository = "https://github.com/abc15018045126/wintun-rs"
+homepage = "https://github.com/abc15018045126/wintun-rs"
+readme = "README.md"
+keywords = ["wintun", "tun", "wireguard", "vpn", "windows"]
+categories = ["network-programming", "os::windows-apis"]
+include = [
+    "src/**/*",
+    "tests/**/*",
+    "build.rs",
+    "exports.def",
+    "Release/amd64/driver/*",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE"
+]
 
 [lib]
 name = "wintun"

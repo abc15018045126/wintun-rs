@@ -18,8 +18,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "wintun"
-version = "0.14.1"
+name = "wintun-rs"
+version = "0.0.4"
 dependencies = [
  "windows-sys",
 ]

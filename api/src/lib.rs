@@ -12,8 +12,11 @@ pub mod nci;
 pub mod ntdll;
 pub mod registry;
 pub mod resource;
+pub mod safe;
 pub mod session;
 pub mod types;
+
+pub use safe::{ensure_initialized, Adapter, Packet, SendPacket, Session};
 
 #[cfg(test)]
 mod tests;

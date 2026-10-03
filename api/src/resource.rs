@@ -14,9 +14,9 @@ use crate::types::{
     from_wide_ptr, set_last_error, GetWindowsDirectoryW, PathCombineW, WintunLoggerLevel,
 };
 
-pub const DRIVER_CAT: &[u8] = include_bytes!("../../Release/amd64/driver/wintun.cat");
-pub const DRIVER_INF: &[u8] = include_bytes!("../../Release/amd64/driver/wintun.inf");
-pub const DRIVER_SYS: &[u8] = include_bytes!("../../Release/amd64/driver/wintun.sys");
+pub const DRIVER_CAT: &[u8] = include_bytes!("../Release/amd64/driver/wintun.cat");
+pub const DRIVER_INF: &[u8] = include_bytes!("../Release/amd64/driver/wintun.inf");
+pub const DRIVER_SYS: &[u8] = include_bytes!("../Release/amd64/driver/wintun.sys");
 
 const GENERIC_WRITE: u32 = 0x40000000;
 

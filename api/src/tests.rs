@@ -142,4 +142,10 @@ mod unit_tests {
         // SetupAPI error 0xE000020B (SPAPI_E_NO_SUCH_DEVINST) -> 0x800F020B
         assert_eq!(hresult_from_setupapi(0xE000020B), 0x800F020B);
     }
+
+    #[test]
+    fn test_safe_api_initialization() {
+        crate::safe::ensure_initialized();
+        let _ = crate::safe::Adapter::running_driver_version();
+    }
 }

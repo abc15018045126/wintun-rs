@@ -124,14 +124,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let recv_running = running.clone();
     let recv_thread = thread::spawn(move || {
         while recv_running.load(Ordering::Relaxed) {
-            // Wait up to 250ms for incoming packets
-            if recv_session.wait_for_data(250) {
-                // Drain all ready packets
-                while let Ok(Some(packet)) = recv_session.receive_packet() {
-                    // Packet implements Deref<Target = [u8]>
-                    print_packet(&packet);
-                    // `packet` is automatically released when dropped here!
-                }
+            let mut had_packet = false;
+            // Drain all available packets from ring buffer
+            while let Ok(Some(packet)) = recv_session.receive_packet() {
+                had_packet = true;
+                // Packet implements Deref<Target = [u8]>
+                print_packet(&packet);
+                // `packet` slot in the ring buffer is automatically released on drop
+            }
+
+            // If no packets were available, wait up to 50ms for Wintun event signal
+            if !had_packet {
+                recv_session.wait_for_data(50);
             }
         }
         println!("      Receive worker thread exited cleanly.");
@@ -149,8 +153,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(mut send_pkt) => {
                 // SendPacket implements DerefMut<Target = [u8]>
                 make_icmp_echo_request(&mut send_pkt);
-                // Explicitly send or let it auto-send on drop
-                send_pkt.send();
+                // Dispatch packet directly to Wintun ring buffer
+                session.send_packet(send_pkt);
                 println!("      [{}] Sent ICMP Echo Request (28 bytes)", i);
             }
             Err(err) => {

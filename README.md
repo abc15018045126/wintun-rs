@@ -79,13 +79,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let recv_thread = thread::spawn(move || {
         while r.load(Ordering::Relaxed) {
-            // Wait up to 250ms for packets to arrive
-            if recv_session.wait_for_data(250) {
-                // Drain available packets
-                while let Ok(Some(packet)) = recv_session.receive_packet() {
-                    println!("Received IP packet: {} bytes", packet.len());
-                    // `packet` automatically frees its ring slot when dropped!
-                }
+            let mut had_packet = false;
+            // Drain all available packets from ring buffer
+            while let Ok(Some(packet)) = recv_session.receive_packet() {
+                had_packet = true;
+                println!("Received IP packet: {} bytes", packet.len());
+                // `packet` automatically frees its ring slot when dropped!
+            }
+
+            // Wait for Wintun event signal if ring is currently empty
+            if !had_packet {
+                recv_session.wait_for_data(50);
             }
         }
     });
@@ -94,8 +98,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut send_packet = session.allocate_send_packet(28)?;
     // Fill packet data (IPv4 header + payload)...
     send_packet[0] = 0x45; // IPv4
-    // Send explicitly or let it send automatically on drop:
-    send_packet.send();
+    // Dispatch packet directly to ring buffer:
+    session.send_packet(send_packet);
 
     // 5. Shutdown and cleanup
     thread::sleep(Duration::from_secs(3));

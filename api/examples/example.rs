@@ -8,8 +8,8 @@
 //! - Automatic resource cleanup (Adapter, Session, Packets) via RAII Drop guards
 //! - No external wintun.dll required on disk (embedded driver binaries)
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 use wintun::Adapter;
@@ -39,12 +39,12 @@ fn make_icmp_echo_request(packet: &mut [u8]) {
     packet[0] = 0x45; // Version 4, IHL 5
     packet[1] = 0x00; // DSCP / ECN
     packet[2..4].copy_from_slice(&28u16.to_be_bytes()); // Total length 28
-    packet[4..6].copy_from_slice(&1u16.to_be_bytes());  // Identification
-    packet[6..8].copy_from_slice(&0u16.to_be_bytes());  // Flags / Fragment offset
-    packet[8] = 64;   // TTL
-    packet[9] = 1;    // Protocol: ICMP
-    packet[12..16].copy_from_slice(&[10, 6, 7, 7]);     // Source IP: 10.6.7.7
-    packet[16..20].copy_from_slice(&[10, 6, 7, 8]);     // Dest IP: 10.6.7.8
+    packet[4..6].copy_from_slice(&1u16.to_be_bytes()); // Identification
+    packet[6..8].copy_from_slice(&0u16.to_be_bytes()); // Flags / Fragment offset
+    packet[8] = 64; // TTL
+    packet[9] = 1; // Protocol: ICMP
+    packet[12..16].copy_from_slice(&[10, 6, 7, 7]); // Source IP: 10.6.7.7
+    packet[16..20].copy_from_slice(&[10, 6, 7, 8]); // Dest IP: 10.6.7.8
 
     let ip_cksum = ip_checksum(&packet[..20]);
     packet[10..12].copy_from_slice(&ip_cksum.to_be_bytes());
@@ -53,7 +53,7 @@ fn make_icmp_echo_request(packet: &mut [u8]) {
     packet[20] = 8; // Type: Echo Request
     packet[21] = 0; // Code: 0
     packet[24..26].copy_from_slice(&0x1234u16.to_be_bytes()); // Identifier
-    packet[26..28].copy_from_slice(&1u16.to_be_bytes());      // Sequence number
+    packet[26..28].copy_from_slice(&1u16.to_be_bytes()); // Sequence number
 
     let icmp_cksum = ip_checksum(&packet[20..28]);
     packet[22..24].copy_from_slice(&icmp_cksum.to_be_bytes());
@@ -62,7 +62,10 @@ fn make_icmp_echo_request(packet: &mut [u8]) {
 /// Parses and prints basic packet header information.
 fn print_packet(packet: &[u8]) {
     if packet.len() < 20 {
-        println!("[Recv] Packet too short for IP header ({} bytes)", packet.len());
+        println!(
+            "[Recv] Packet too short for IP header ({} bytes)",
+            packet.len()
+        );
         return;
     }
 
@@ -70,8 +73,14 @@ fn print_packet(packet: &[u8]) {
     match version {
         4 => {
             let proto = packet[9];
-            let src = format!("{}.{}.{}.{}", packet[12], packet[13], packet[14], packet[15]);
-            let dst = format!("{}.{}.{}.{}", packet[16], packet[17], packet[18], packet[19]);
+            let src = format!(
+                "{}.{}.{}.{}",
+                packet[12], packet[13], packet[14], packet[15]
+            );
+            let dst = format!(
+                "{}.{}.{}.{}",
+                packet[16], packet[17], packet[18], packet[19]
+            );
             println!(
                 "[Recv IPv4] proto=0x{:02x}, len={}, src={}, dst={}",
                 proto,
@@ -85,17 +94,28 @@ fn print_packet(packet: &[u8]) {
                 return;
             }
             let proto = packet[6];
-            println!("[Recv IPv6] next_header=0x{:02x}, len={}", proto, packet.len());
+            println!(
+                "[Recv IPv6] next_header=0x{:02x}, len={}",
+                proto,
+                packet.len()
+            );
         }
         _ => {
-            println!("[Recv] Unknown IP version {}: {} bytes", version, packet.len());
+            println!(
+                "[Recv] Unknown IP version {}: {} bytes",
+                version,
+                packet.len()
+            );
         }
     }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Wintun-rs Safe Rust Example ===");
-    println!("Running driver version: 0x{:08X}", Adapter::running_driver_version());
+    println!(
+        "Running driver version: 0x{:08X}",
+        Adapter::running_driver_version()
+    );
 
     // 1. Create or open the Wintun adapter (Name: "Demo", Type: "Example")
     println!("[1/4] Creating Wintun adapter 'Demo'...");
@@ -104,7 +124,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map_err(|e| format!("Failed to create/open adapter: {}", e))?;
 
     let luid = adapter.get_luid();
-    println!("      Adapter created successfully! LUID Value: 0x{:016X}", luid.value);
+    println!(
+        "      Adapter created successfully! LUID Value: 0x{:016X}",
+        luid.value
+    );
 
     // 2. Start a session with 4MB ring buffer capacity
     println!("[2/4] Starting TUN session (capacity: 4MB)...");

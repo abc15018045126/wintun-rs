@@ -6,18 +6,18 @@ use windows_sys::Win32::Foundation::{
 };
 use windows_sys::Win32::Security::Authorization::ConvertStringSecurityDescriptorToSecurityDescriptorW;
 use windows_sys::Win32::Security::{
-    CreateWellKnownSid, EqualSid, GetTokenInformation, WinBuiltinAdministratorsSid,
-    WinLocalSystemSid, SECURITY_ATTRIBUTES, TOKEN_QUERY, TOKEN_USER,
+    CreateWellKnownSid, EqualSid, GetTokenInformation, SECURITY_ATTRIBUTES, TOKEN_QUERY,
+    TOKEN_USER, WinBuiltinAdministratorsSid, WinLocalSystemSid,
 };
 use windows_sys::Win32::System::Threading::{
-    CreateBoundaryDescriptorW, CreateMutexW, CreatePrivateNamespaceW, GetCurrentProcess,
-    OpenPrivateNamespaceW, WaitForSingleObject, INFINITE,
+    CreateBoundaryDescriptorW, CreateMutexW, CreatePrivateNamespaceW, GetCurrentProcess, INFINITE,
+    OpenPrivateNamespaceW, WaitForSingleObject,
 };
 
 use crate::logger::{log_error, log_last_error, log_msg};
 use crate::types::{
-    get_last_error, set_last_error, LocalFree, NamespaceMutex, OpenProcessToken, SafeHandle,
-    WintunLoggerLevel, BOOL,
+    BOOL, LocalFree, NamespaceMutex, OpenProcessToken, SafeHandle, WintunLoggerLevel,
+    get_last_error, set_last_error,
 };
 
 #[link(name = "kernel32")]
@@ -123,11 +123,7 @@ fn create_well_known_sid(
             &mut size,
         )
     };
-    if ok != 0 {
-        Some(sid)
-    } else {
-        None
-    }
+    if ok != 0 { Some(sid) } else { None }
 }
 
 fn check_is_local_system(local_system_sid: &[u8]) -> Option<bool> {

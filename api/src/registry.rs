@@ -1,12 +1,12 @@
 use windows_sys::Win32::Foundation::{ERROR_INVALID_DATA, ERROR_MORE_DATA, ERROR_SUCCESS};
 use windows_sys::Win32::System::Registry::{
-    RegQueryValueExW, REG_DWORD, REG_EXPAND_SZ, REG_MULTI_SZ, REG_SZ,
+    REG_DWORD, REG_EXPAND_SZ, REG_MULTI_SZ, REG_SZ, RegQueryValueExW,
 };
 
 use crate::logger::{get_registry_key_path, is_logger_active, log_error, log_last_error, log_msg};
 use crate::types::{
-    from_wide_ptr, set_last_error, ExpandEnvironmentStringsW, WintunLoggerLevel,
-    ERROR_INVALID_DATATYPE, HKEY,
+    ERROR_INVALID_DATATYPE, ExpandEnvironmentStringsW, HKEY, WintunLoggerLevel, from_wide_ptr,
+    set_last_error,
 };
 
 pub fn registry_get_string(buf: &mut Vec<u16>, value_type: u32) -> Result<(), u32> {

@@ -17,15 +17,15 @@ pub mod safe;
 pub mod session;
 pub mod types;
 
-pub use safe::{ensure_initialized, Adapter, Packet, SendPacket, Session};
+pub use safe::{Adapter, Packet, SendPacket, Session, ensure_initialized};
 
 #[cfg(test)]
 mod tests;
 
 use std::ffi::c_void;
-use windows_sys::core::GUID;
 use windows_sys::Win32::Foundation::{HANDLE, HINSTANCE};
 use windows_sys::Win32::System::SystemServices::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH};
+use windows_sys::core::GUID;
 
 use crate::types::*;
 

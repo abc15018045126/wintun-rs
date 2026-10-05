@@ -1,28 +1,28 @@
 use crate::ntdll::RtlNtStatusToDosError;
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicBool, Ordering};
-use windows_sys::core::GUID;
 use windows_sys::Win32::Foundation::{
     ERROR_BUFFER_OVERFLOW, ERROR_DEVICE_NOT_AVAILABLE, ERROR_GEN_FAILURE, ERROR_INVALID_DATA,
     ERROR_NOT_FOUND, ERROR_SUCCESS, HANDLE, INVALID_HANDLE_VALUE, WAIT_FAILED, WAIT_OBJECT_0,
 };
+use windows_sys::core::GUID;
 
 pub const ERROR_DEVICE_ENUMERATION_ERROR: u32 = 508;
 pub const ERROR_PNP_REGISTRY_ERROR: u32 = 509;
 use windows_sys::Win32::Devices::DeviceAndDriverInstallation::{
-    SetupDiCallClassInstaller, SetupDiCreateDeviceInfoListExW, SetupDiDestroyDeviceInfoList,
-    SetupDiGetClassDevsExW, SetupDiGetDeviceInstanceIdW, SetupDiOpenDevRegKey,
-    SetupDiOpenDeviceInfoW, SetupDiSetClassInstallParamsW, CR_SUCCESS, DICS_DISABLE, DICS_ENABLE,
-    DICS_FLAG_GLOBAL, DIF_PROPERTYCHANGE, DIF_REMOVE, DIGCF_PRESENT, DIOD_INHERIT_CLASSDRVS,
-    DIREG_DRV, HDEVINFO, SP_CLASSINSTALL_HEADER, SP_DEVINFO_DATA, SP_PROPCHANGE_PARAMS,
-    SP_REMOVEDEVICE_PARAMS,
+    CR_SUCCESS, DICS_DISABLE, DICS_ENABLE, DICS_FLAG_GLOBAL, DIF_PROPERTYCHANGE, DIF_REMOVE,
+    DIGCF_PRESENT, DIOD_INHERIT_CLASSDRVS, DIREG_DRV, HDEVINFO, SP_CLASSINSTALL_HEADER,
+    SP_DEVINFO_DATA, SP_PROPCHANGE_PARAMS, SP_REMOVEDEVICE_PARAMS, SetupDiCallClassInstaller,
+    SetupDiCreateDeviceInfoListExW, SetupDiDestroyDeviceInfoList, SetupDiGetClassDevsExW,
+    SetupDiGetDeviceInstanceIdW, SetupDiOpenDevRegKey, SetupDiOpenDeviceInfoW,
+    SetupDiSetClassInstallParamsW,
 };
 use windows_sys::Win32::Storage::FileSystem::{
     CreateFileW, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
 };
-use windows_sys::Win32::System::Registry::{RegSetValueExW, REG_BINARY};
+use windows_sys::Win32::System::Registry::{REG_BINARY, RegSetValueExW};
 use windows_sys::Win32::System::Threading::{
-    CreateEventW, QueueUserWorkItem, SetEvent, WaitForSingleObject, INFINITE,
+    CreateEventW, INFINITE, QueueUserWorkItem, SetEvent, WaitForSingleObject,
 };
 
 use crate::driver::{driver_install, driver_install_deferred_cleanup};
@@ -41,7 +41,7 @@ const GENERIC_WRITE: u32 = 0x40000000;
 unsafe extern "system" {
     fn CM_Locate_DevNodeW(pdn_dev_inst: *mut u32, p_device_id: *const u16, ul_flags: u32) -> u32;
     fn CM_Get_Device_IDW(dn_dev_inst: u32, buffer: *mut u16, buffer_len: u32, ul_flags: u32)
-        -> u32;
+    -> u32;
     fn CM_Open_DevNode_Key(
         dn_dev_inst: u32,
         sam_desired: u32,

@@ -1,11 +1,11 @@
-use std::sync::atomic::{fence, Ordering};
+use std::sync::atomic::{Ordering, fence};
 use windows_sys::Win32::Foundation::{
     ERROR_BUFFER_OVERFLOW, ERROR_HANDLE_EOF, ERROR_INVALID_DATA, ERROR_NO_MORE_ITEMS,
     ERROR_OUTOFMEMORY, HANDLE, INVALID_HANDLE_VALUE,
 };
-use windows_sys::Win32::System::Memory::{VirtualAlloc, MEM_COMMIT, MEM_RESERVE, PAGE_READWRITE};
-use windows_sys::Win32::System::Threading::CreateEventW;
 use windows_sys::Win32::System::IO::DeviceIoControl;
+use windows_sys::Win32::System::Memory::{MEM_COMMIT, MEM_RESERVE, PAGE_READWRITE, VirtualAlloc};
+use windows_sys::Win32::System::Threading::CreateEventW;
 
 use crate::adapter::adapter_open_device_object;
 use crate::logger::{is_logger_active, log_last_error, log_msg};

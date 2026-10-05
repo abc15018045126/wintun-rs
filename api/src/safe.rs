@@ -1,8 +1,8 @@
 use std::io;
 use std::ops::{Deref, DerefMut};
 use std::sync::Once;
-use windows_sys::core::GUID;
 use windows_sys::Win32::Foundation::{ERROR_NO_MORE_ITEMS, HANDLE};
+use windows_sys::core::GUID;
 
 use crate::adapter::{
     wintun_close_adapter, wintun_create_adapter, wintun_get_adapter_luid, wintun_open_adapter,
@@ -10,12 +10,11 @@ use crate::adapter::{
 use crate::driver::{wintun_delete_driver, wintun_get_running_driver_version};
 use crate::session::{
     wintun_allocate_send_packet, wintun_end_session, wintun_get_read_wait_event,
-    wintun_receive_packet, wintun_release_receive_packet, wintun_send_packet,
-    wintun_start_session,
+    wintun_receive_packet, wintun_release_receive_packet, wintun_send_packet, wintun_start_session,
 };
 use crate::types::{
-    get_last_error, to_wide, NetLuid, TunSession, WintunAdapter, WINTUN_MAX_RING_CAPACITY,
-    WINTUN_MIN_RING_CAPACITY,
+    NetLuid, TunSession, WINTUN_MAX_RING_CAPACITY, WINTUN_MIN_RING_CAPACITY, WintunAdapter,
+    get_last_error, to_wide,
 };
 
 static INIT: Once = Once::new();
@@ -57,7 +56,9 @@ impl Adapter {
                 data4: [b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]],
             }
         });
-        let guid_ptr = guid_struct.as_ref().map_or(std::ptr::null(), |g| g as *const _);
+        let guid_ptr = guid_struct
+            .as_ref()
+            .map_or(std::ptr::null(), |g| g as *const _);
 
         let raw = wintun_create_adapter(name_w.as_ptr(), type_w.as_ptr(), guid_ptr);
         if raw.is_null() {
@@ -71,7 +72,11 @@ impl Adapter {
     }
 
     /// Creates a new Wintun adapter with a reference to a Win32 `GUID`.
-    pub fn create_with_guid(name: &str, tunnel_type: &str, requested_guid: Option<&GUID>) -> io::Result<Self> {
+    pub fn create_with_guid(
+        name: &str,
+        tunnel_type: &str,
+        requested_guid: Option<&GUID>,
+    ) -> io::Result<Self> {
         ensure_initialized();
         let name_w = to_wide(name);
         let type_w = to_wide(tunnel_type);
@@ -129,10 +134,7 @@ impl Adapter {
         if raw.is_null() {
             Err(io::Error::from_raw_os_error(get_last_error() as i32))
         } else {
-            Ok(Session {
-                raw,
-                capacity: cap,
-            })
+            Ok(Session { raw, capacity: cap })
         }
     }
 

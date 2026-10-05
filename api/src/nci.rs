@@ -1,14 +1,14 @@
 use std::sync::atomic::{AtomicPtr, Ordering};
-use windows_sys::core::GUID;
 use windows_sys::Win32::Devices::DeviceAndDriverInstallation::{
-    SetupDiGetClassDevsExW, SetupDiOpenDevRegKey, DICS_FLAG_GLOBAL, DIREG_DRV,
+    DICS_FLAG_GLOBAL, DIREG_DRV, SetupDiGetClassDevsExW, SetupDiOpenDevRegKey,
 };
 use windows_sys::Win32::Foundation::{
-    FreeLibrary, ERROR_BUFFER_OVERFLOW, ERROR_DUP_NAME, ERROR_GEN_FAILURE, ERROR_NOT_FOUND,
-    ERROR_SUCCESS, HANDLE, HMODULE, INVALID_HANDLE_VALUE,
+    ERROR_BUFFER_OVERFLOW, ERROR_DUP_NAME, ERROR_GEN_FAILURE, ERROR_NOT_FOUND, ERROR_SUCCESS,
+    FreeLibrary, HANDLE, HMODULE, INVALID_HANDLE_VALUE,
 };
 use windows_sys::Win32::System::LibraryLoader::GetProcAddress;
 use windows_sys::Win32::System::Registry::HKEY;
+use windows_sys::core::GUID;
 
 use crate::logger::{log_error, log_last_error};
 use crate::registry::registry_query_string;
@@ -29,7 +29,7 @@ unsafe extern "system" {
     ) -> u32;
 
     fn ConvertInterfaceLuidToGuid(interface_luid: *const NetLuid, interface_guid: *mut GUID)
-        -> u32;
+    -> u32;
 }
 
 type NciSetConnectionNameFn =
@@ -246,37 +246,36 @@ pub fn nci_set_adapter_name(guid: &GUID, wide_name: *const u16) -> Result<(), u3
     for i in 0.. {
         let mut last_error = unsafe { set_conn_name(guid, available_name.as_ptr()) };
 
-        if last_error == ERROR_DUP_NAME {
-            if let Some(guid2) = convert_interface_alias_to_guid(available_name.as_ptr()) {
-                for j in 0..max_suffix {
-                    let mut proposal = [0u16; MAX_ADAPTER_NAME];
-                    if !format_name_with_suffix(&mut proposal, wide_name, base_len, (j + 1) as u32)
-                    {
-                        set_last_error(ERROR_BUFFER_OVERFLOW);
-                        return Err(ERROR_BUFFER_OVERFLOW);
-                    }
-                    if unsafe { wide_eq_ignore_case(proposal.as_ptr(), available_name.as_ptr()) } {
-                        continue;
-                    }
-                    let last_error2 = unsafe { set_conn_name(&guid2, proposal.as_ptr()) };
-                    if last_error2 == ERROR_DUP_NAME {
-                        continue;
-                    }
-                    if !rename_by_net_guid(&guid2, proposal.as_ptr()) {
-                        let prop_str = unsafe { from_wide_ptr(proposal.as_ptr()) };
-                        log_last_error(&format!(
-                            "Failed to set foreign adapter name to \"{}\"",
-                            prop_str
-                        ));
-                    }
-                    if last_error2 == ERROR_SUCCESS {
-                        last_error = unsafe { set_conn_name(guid, available_name.as_ptr()) };
-                        if last_error == ERROR_SUCCESS {
-                            break;
-                        }
-                    }
-                    break;
+        if last_error == ERROR_DUP_NAME
+            && let Some(guid2) = convert_interface_alias_to_guid(available_name.as_ptr())
+        {
+            for j in 0..max_suffix {
+                let mut proposal = [0u16; MAX_ADAPTER_NAME];
+                if !format_name_with_suffix(&mut proposal, wide_name, base_len, (j + 1) as u32) {
+                    set_last_error(ERROR_BUFFER_OVERFLOW);
+                    return Err(ERROR_BUFFER_OVERFLOW);
                 }
+                if unsafe { wide_eq_ignore_case(proposal.as_ptr(), available_name.as_ptr()) } {
+                    continue;
+                }
+                let last_error2 = unsafe { set_conn_name(&guid2, proposal.as_ptr()) };
+                if last_error2 == ERROR_DUP_NAME {
+                    continue;
+                }
+                if !rename_by_net_guid(&guid2, proposal.as_ptr()) {
+                    let prop_str = unsafe { from_wide_ptr(proposal.as_ptr()) };
+                    log_last_error(&format!(
+                        "Failed to set foreign adapter name to \"{}\"",
+                        prop_str
+                    ));
+                }
+                if last_error2 == ERROR_SUCCESS {
+                    last_error = unsafe { set_conn_name(guid, available_name.as_ptr()) };
+                    if last_error == ERROR_SUCCESS {
+                        break;
+                    }
+                }
+                break;
             }
         }
 

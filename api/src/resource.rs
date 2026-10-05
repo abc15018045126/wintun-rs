@@ -3,15 +3,15 @@ use windows_sys::Win32::Foundation::{
     INVALID_HANDLE_VALUE,
 };
 use windows_sys::Win32::Storage::FileSystem::{
-    CreateDirectoryW, CreateFileW, WriteFile, CREATE_NEW, FILE_ATTRIBUTE_NORMAL,
-    FILE_ATTRIBUTE_TEMPORARY,
+    CREATE_NEW, CreateDirectoryW, CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_TEMPORARY,
+    WriteFile,
 };
 
 use crate::logger::{log_last_error, log_msg};
 use crate::namespace::get_security_attributes;
 use crate::ntdll::RtlGenRandom;
 use crate::types::{
-    from_wide_ptr, set_last_error, GetWindowsDirectoryW, PathCombineW, WintunLoggerLevel,
+    GetWindowsDirectoryW, PathCombineW, WintunLoggerLevel, from_wide_ptr, set_last_error,
 };
 
 pub const DRIVER_CAT: &[u8] = include_bytes!("../Release/amd64/driver/wintun.cat");

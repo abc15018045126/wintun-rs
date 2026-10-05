@@ -1,13 +1,13 @@
 use std::sync::atomic::{AtomicPtr, Ordering};
 use windows_sys::Win32::System::Diagnostics::Debug::{
-    FormatMessageW, FORMAT_MESSAGE_ALLOCATE_BUFFER, FORMAT_MESSAGE_ARGUMENT_ARRAY,
-    FORMAT_MESSAGE_FROM_STRING, FORMAT_MESSAGE_FROM_SYSTEM,
+    FORMAT_MESSAGE_ALLOCATE_BUFFER, FORMAT_MESSAGE_ARGUMENT_ARRAY, FORMAT_MESSAGE_FROM_STRING,
+    FORMAT_MESSAGE_FROM_SYSTEM, FormatMessageW,
 };
 
 use crate::ntdll::{NtQueryKey, NtQuerySystemTime};
 use crate::types::{
-    from_wide_null, get_last_error, set_last_error, to_wide, WintunLoggerCallback,
-    WintunLoggerLevel, FORMAT_MESSAGE_MAX_WIDTH_MASK, HKEY, MAX_REG_PATH,
+    FORMAT_MESSAGE_MAX_WIDTH_MASK, HKEY, MAX_REG_PATH, WintunLoggerCallback, WintunLoggerLevel,
+    from_wide_null, get_last_error, set_last_error, to_wide,
 };
 
 unsafe extern "system" fn nop_logger(

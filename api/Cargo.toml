@@ -1,6 +1,6 @@
 [package]
 name = "wintun-rs"
-version = "0.0.5"
+version = "0.0.6"
 edition = "2024"
 authors = ["abc15018045126", "WireGuard LLC", "Antigravity"]
 description = "Native Safe Rust library and userspace bindings for Wintun (WireGuard) TUN devices on Windows."
@@ -13,6 +13,7 @@ categories = ["network-programming", "os::windows-apis"]
 include = [
     "src/**/*",
     "tests/**/*",
+    "examples/**/*",
     "build.rs",
     "exports.def",
     "Release/amd64/driver/*",
@@ -49,9 +50,4 @@ windows-sys = { version = "0.61", features = [
 
 [build-dependencies]
 
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-panic = "abort"
-strip = true
+

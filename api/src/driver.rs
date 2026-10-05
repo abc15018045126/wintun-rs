@@ -1,10 +1,10 @@
 use std::ffi::c_void;
 use windows_sys::Win32::Devices::DeviceAndDriverInstallation::{
-    SetupDiBuildDriverInfoList, SetupDiCreateDeviceInfoListExW, SetupDiCreateDeviceInfoW,
-    SetupDiDestroyDeviceInfoList, SetupDiDestroyDriverInfoList, SetupDiEnumDriverInfoW,
-    SetupDiGetClassDevsExW, SetupDiGetDriverInfoDetailW, SetupDiSetDeviceRegistryPropertyW,
-    SetupUninstallOEMInfW, DICD_GENERATE_ID, DIGCF_PRESENT, HDEVINFO, SPDIT_COMPATDRIVER,
-    SPDRP_HARDWAREID, SP_DEVINFO_DATA,
+    DICD_GENERATE_ID, DIGCF_PRESENT, HDEVINFO, SP_DEVINFO_DATA, SPDIT_COMPATDRIVER,
+    SPDRP_HARDWAREID, SetupDiBuildDriverInfoList, SetupDiCreateDeviceInfoListExW,
+    SetupDiCreateDeviceInfoW, SetupDiDestroyDeviceInfoList, SetupDiDestroyDriverInfoList,
+    SetupDiEnumDriverInfoW, SetupDiGetClassDevsExW, SetupDiGetDriverInfoDetailW,
+    SetupDiSetDeviceRegistryPropertyW, SetupUninstallOEMInfW,
 };
 use windows_sys::Win32::Foundation::{
     ERROR_BUFFER_OVERFLOW, ERROR_FILE_NOT_FOUND, ERROR_NO_MORE_ITEMS, ERROR_SUCCESS, FILETIME,
@@ -19,7 +19,7 @@ use crate::ntdll::{
     RtlProcessModules, STATUS_INFO_LENGTH_MISMATCH, STATUS_SUCCESS, SYSTEM_MODULE_INFORMATION,
 };
 use crate::resource::{
-    resource_copy_to_file, resource_create_temporary_directory, DRIVER_CAT, DRIVER_INF, DRIVER_SYS,
+    DRIVER_CAT, DRIVER_INF, DRIVER_SYS, resource_copy_to_file, resource_create_temporary_directory,
 };
 use crate::types::*;
 
@@ -41,26 +41,28 @@ fn enum_driver_info<'a>(
     driver_type: u32,
 ) -> impl Iterator<Item = SP_DRVINFO_DATA_W> + 'a {
     let mut idx = 0;
-    std::iter::from_fn(move || loop {
-        let mut data = SP_DRVINFO_DATA_W::default();
-        if unsafe {
-            SetupDiEnumDriverInfoW(
-                dev_info,
-                dev_info_data,
-                driver_type,
-                idx,
-                &mut data as *mut _ as _,
-            )
-        } == 0
-        {
-            if get_last_error() == ERROR_NO_MORE_ITEMS {
-                return None;
+    std::iter::from_fn(move || {
+        loop {
+            let mut data = SP_DRVINFO_DATA_W::default();
+            if unsafe {
+                SetupDiEnumDriverInfoW(
+                    dev_info,
+                    dev_info_data,
+                    driver_type,
+                    idx,
+                    &mut data as *mut _ as _,
+                )
+            } == 0
+            {
+                if get_last_error() == ERROR_NO_MORE_ITEMS {
+                    return None;
+                }
+                idx += 1;
+                continue;
             }
             idx += 1;
-            continue;
+            return Some(data);
         }
-        idx += 1;
-        return Some(data);
     })
 }
 
@@ -464,19 +466,17 @@ pub fn driver_install() -> Result<(HDEVINFO, Vec<SP_DEVINFO_DATA>), u32> {
                 &dev_info_data,
                 &mut drv_info_data,
                 &mut detail_buf,
-            ) {
-                if unsafe {
-                    SetupUninstallOEMInfW(
-                        inf_name_ptr,
-                        0x0001, /* SUOI_FORCEDELETE */
-                        std::ptr::null_mut(),
-                    )
-                } == 0
-                    && is_logger_active()
-                {
-                    let inf_name = unsafe { from_wide_ptr(inf_name_ptr) };
-                    log_last_error(&format!("Unable to remove existing driver {}", inf_name));
-                }
+            ) && unsafe {
+                SetupUninstallOEMInfW(
+                    inf_name_ptr,
+                    0x0001, /* SUOI_FORCEDELETE */
+                    std::ptr::null_mut(),
+                )
+            } == 0
+                && is_logger_active()
+            {
+                let inf_name = unsafe { from_wide_ptr(inf_name_ptr) };
+                log_last_error(&format!("Unable to remove existing driver {}", inf_name));
             }
             continue;
         }

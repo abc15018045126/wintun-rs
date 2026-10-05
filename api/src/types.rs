@@ -1,14 +1,14 @@
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicI32, AtomicU32};
-pub use windows_sys::core::GUID;
 pub use windows_sys::Win32::Devices::DeviceAndDriverInstallation::{
-    SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInfo, HDEVINFO, SP_DEVINFO_DATA,
+    HDEVINFO, SP_DEVINFO_DATA, SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInfo,
 };
 pub use windows_sys::Win32::Foundation::{
     CloseHandle, ERROR_NO_MORE_ITEMS, FILETIME, HANDLE, INVALID_HANDLE_VALUE,
 };
-pub use windows_sys::Win32::System::Memory::{VirtualFree, MEM_RELEASE};
+pub use windows_sys::Win32::System::Memory::{MEM_RELEASE, VirtualFree};
 pub use windows_sys::Win32::System::Registry::RegCloseKey;
+pub use windows_sys::core::GUID;
 
 pub type BOOL = i32;
 pub type DWORD = u32;
@@ -117,17 +117,19 @@ pub fn new_dev_info_data() -> SP_DEVINFO_DATA {
 
 pub fn enum_device_info(dev_info: HDEVINFO) -> impl Iterator<Item = SP_DEVINFO_DATA> {
     let mut idx = 0;
-    std::iter::from_fn(move || loop {
-        let mut data = new_dev_info_data();
-        if unsafe { SetupDiEnumDeviceInfo(dev_info, idx, &mut data) } == 0 {
-            if get_last_error() == ERROR_NO_MORE_ITEMS {
-                return None;
+    std::iter::from_fn(move || {
+        loop {
+            let mut data = new_dev_info_data();
+            if unsafe { SetupDiEnumDeviceInfo(dev_info, idx, &mut data) } == 0 {
+                if get_last_error() == ERROR_NO_MORE_ITEMS {
+                    return None;
+                }
+                idx += 1;
+                continue;
             }
             idx += 1;
-            continue;
+            return Some(data);
         }
-        idx += 1;
-        return Some(data);
     })
 }
 

@@ -1,12 +1,12 @@
 use std::ffi::c_void;
 use std::time::Instant;
-use windows_sys::core::GUID;
-use windows_sys::Win32::Foundation::{FreeLibrary, GetLastError, FILETIME, HMODULE};
+use windows_sys::Win32::Foundation::{FILETIME, FreeLibrary, GetLastError, HMODULE};
 use windows_sys::Win32::System::LibraryLoader::{GetModuleFileNameW, GetProcAddress, LoadLibraryW};
 use windows_sys::Win32::System::ProcessStatus::{GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS};
 use windows_sys::Win32::System::Threading::{
     GetCurrentProcess, GetProcessHandleCount, GetProcessTimes,
 };
+use windows_sys::core::GUID;
 
 type WintunCreateAdapterFn = unsafe extern "system" fn(
     name: *const u16,
@@ -65,9 +65,8 @@ impl WintunApi {
         }
 
         let mut path_buf = [0u16; 1024];
-        let len = unsafe {
-            GetModuleFileNameW(module, path_buf.as_mut_ptr(), path_buf.len() as u32)
-        };
+        let len =
+            unsafe { GetModuleFileNameW(module, path_buf.as_mut_ptr(), path_buf.len() as u32) };
         let loaded_path = if len > 0 {
             String::from_utf16_lossy(&path_buf[..len as usize])
         } else {
@@ -239,7 +238,10 @@ fn main() {
     if let Some(ref path) = cli_path {
         match WintunApi::load(path) {
             Ok(api) => {
-                println!("[+] Successfully loaded Wintun DLL from CLI argument: {}", path);
+                println!(
+                    "[+] Successfully loaded Wintun DLL from CLI argument: {}",
+                    path
+                );
                 api_opt = Some(api);
             }
             Err(e) => {
@@ -313,7 +315,10 @@ fn main() {
         unsafe { (api.create_adapter)(adapter_name.as_ptr(), tunnel_type.as_ptr(), &guid) };
     if adapter.is_null() {
         let err = unsafe { GetLastError() };
-        eprintln!("[-] Failed to create adapter for Test 1 (Error: 0x{:08X}). Ensure running as Administrator!", err);
+        eprintln!(
+            "[-] Failed to create adapter for Test 1 (Error: 0x{:08X}). Ensure running as Administrator!",
+            err
+        );
         std::process::exit(1);
     }
 
@@ -362,10 +367,18 @@ fn main() {
             let (cpu_pct, k_ms, u_ms) = calculate_cpu_usage(&last_checkpoint_metrics, &m);
             last_checkpoint_metrics = m;
 
-            println!("    [Progress {:>6}/{:>6}] Speed: {:>9.0} pkt/s | CPU: {:>5.1}% (K: {:>2}ms, U: {:>2}ms) | Handles: {:>4} | Private: {:>6} KB (Δ: {:+4} KB)",
-                i, total_packets, pps, cpu_pct, k_ms, u_ms, m.handle_count,
+            println!(
+                "    [Progress {:>6}/{:>6}] Speed: {:>9.0} pkt/s | CPU: {:>5.1}% (K: {:>2}ms, U: {:>2}ms) | Handles: {:>4} | Private: {:>6} KB (Δ: {:+4} KB)",
+                i,
+                total_packets,
+                pps,
+                cpu_pct,
+                k_ms,
+                u_ms,
+                m.handle_count,
                 m.pagefile_kb,
-                m.pagefile_kb as i64 - t1_start_metrics.pagefile_kb as i64);
+                m.pagefile_kb as i64 - t1_start_metrics.pagefile_kb as i64
+            );
         }
     }
 
@@ -390,9 +403,15 @@ fn main() {
         0.0
     };
 
-    println!("    [T1 End]   Handles: {}, WorkingSet: {} KB, PrivateUsage: {} KB, Total CPU: {} ms (Kernel: {} ms, User: {} ms)",
-        t1_end_metrics.handle_count, t1_end_metrics.working_set_kb, t1_end_metrics.pagefile_kb,
-        t1_total_cpu_ms, t1_kernel_cpu_ms, t1_user_cpu_ms);
+    println!(
+        "    [T1 End]   Handles: {}, WorkingSet: {} KB, PrivateUsage: {} KB, Total CPU: {} ms (Kernel: {} ms, User: {} ms)",
+        t1_end_metrics.handle_count,
+        t1_end_metrics.working_set_kb,
+        t1_end_metrics.pagefile_kb,
+        t1_total_cpu_ms,
+        t1_kernel_cpu_ms,
+        t1_user_cpu_ms
+    );
 
     let t1_handle_delta = t1_end_metrics.handle_count as i64 - t1_start_metrics.handle_count as i64;
     let t1_mem_delta = t1_end_metrics.pagefile_kb as i64 - t1_start_metrics.pagefile_kb as i64;
@@ -475,8 +494,18 @@ fn main() {
         let (_cpu_pct, cycle_k_ms, cycle_u_ms) = calculate_cpu_usage(&prev_cycle_metrics, &m);
         prev_cycle_metrics = m;
 
-        println!("    Cycle {:>2}/{} Completed | CPU: {:>3}ms (K: {:>2}ms, U: {:>2}ms) | Handles: {:>4} (Δ: {:+3}) | Private: {:>6} KB (Δ: {:+4} KB)",
-            c, cycles, cycle_k_ms + cycle_u_ms, cycle_k_ms, cycle_u_ms, m.handle_count, handle_diff, m.pagefile_kb, mem_diff);
+        println!(
+            "    Cycle {:>2}/{} Completed | CPU: {:>3}ms (K: {:>2}ms, U: {:>2}ms) | Handles: {:>4} (Δ: {:+3}) | Private: {:>6} KB (Δ: {:+4} KB)",
+            c,
+            cycles,
+            cycle_k_ms + cycle_u_ms,
+            cycle_k_ms,
+            cycle_u_ms,
+            m.handle_count,
+            handle_diff,
+            m.pagefile_kb,
+            mem_diff
+        );
     }
 
     // =========================================================================
@@ -516,9 +545,13 @@ fn main() {
 
     println!("\n[*] Verdict:");
     if net_handle_delta <= 5 && net_memory_delta <= 512 {
-        println!("    >>> [PASS] PERFECT ZERO LEAKS! Handle count and memory usage are completely stable.");
+        println!(
+            "    >>> [PASS] PERFECT ZERO LEAKS! Handle count and memory usage are completely stable."
+        );
     } else if net_handle_delta <= 10 && net_memory_delta <= 1024 {
-        println!("    >>> [PASS] STABLE! Resource usage is bounded within normal Windows SetupAPI runtime margins.");
+        println!(
+            "    >>> [PASS] STABLE! Resource usage is bounded within normal Windows SetupAPI runtime margins."
+        );
     } else {
         println!(
             "    >>> [WARN] Potential resource drift detected. Check SetupAPI / Handle cleanup."
